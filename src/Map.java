@@ -1,6 +1,7 @@
 import java.awt.Point;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Vector;
 import java.util.concurrent.ThreadLocalRandom;
 
 public class Map {
@@ -8,6 +9,7 @@ public class Map {
 	private int width;
 	private int length;
 	private List<Entity> entities = new ArrayList<Entity>();
+	private Vector<Node> nodeMap = new Vector<Node>();
 	
 	public Map(int w, int l) {
 		width = w;
@@ -21,6 +23,7 @@ public class Map {
 		Point pos = AddEntityAtLocation(e, new Point(randomX, randomY));
 		if (e instanceof Actor)
 			((Actor) e).setMap(this);
+		updateNodeMap();
 		return pos;
 	}
 	
@@ -33,19 +36,69 @@ public class Map {
 						e = entities.get(z);
 					}
 				}
-				if (e instanceof Obstacle) {
-					System.out.printf("[X]");
-				} else if (e instanceof Actor) {
-					System.out.printf("[A]");
-				} else if (e instanceof Destination) {
-					System.out.printf("[O]");
-				}
-				else {
+				if (e != null) {
+					e.display();
+				} else {
 					System.out.printf("[ ]");
 				}
+				
 			}
 			System.out.printf("\n");
 		}
+	}
+	
+	public void updateNodeMap() {
+		nodeMap.clear();
+		for (int widthIndex = 0; widthIndex < length; widthIndex++) {
+			for (int heightIndex = 0; heightIndex < width; heightIndex++) {
+				Point coordinates = new Point(widthIndex,heightIndex);
+				if (GetEntityAtLocation(coordinates) == null) {
+					nodeMap.add(new Node(coordinates));
+				}
+			}
+		}
+	}
+	
+	public Vector<Node> getAdjacentNodes(Point pos) {
+		Vector<Node> fetchedNodes = new Vector<Node>(4);
+		Node rightNode = getNode(new Point(pos.x + 1, pos.y));
+		Node leftNode = getNode(new Point(pos.x - 1, pos.y));
+		Node upNode = getNode(new Point(pos.x, pos.y + 1));
+		Node downNode = getNode(new Point(pos.x, pos.y - 1));
+		if (rightNode != null)
+			fetchedNodes.add(rightNode);
+		if (leftNode != null)
+			fetchedNodes.add(leftNode);
+		if (upNode != null)
+			fetchedNodes.add(upNode);
+		if (downNode != null)
+			fetchedNodes.add(downNode);
+		return fetchedNodes;
+	}
+	
+	public void setNodeByPos(Point pos, Node node) {
+		for (int i = 0; i < nodeMap.size(); i++) {
+			if (nodeMap.get(i).getPosition().equals(pos))
+				nodeMap.set(i, node);
+		}
+	}
+	
+	public Node getNode(Point pos) {
+		Node fetchedNode = null;
+		for (int i = 0; i < nodeMap.size(); i++) {
+			if (nodeMap.get(i).getPosition().equals(pos))
+				fetchedNode = nodeMap.get(i);
+		}
+		return fetchedNode;
+	}
+	
+	public Node getNode(String id) {
+		Node fetchedNode = null;
+		for (int i = 0; i < nodeMap.size(); i++) {
+			if (nodeMap.get(i).getId().equals(id))
+				fetchedNode = nodeMap.get(i);
+		}
+		return fetchedNode;
 	}
 	
 	public int getLength() {
@@ -63,6 +116,16 @@ public class Map {
 			}
 		}
 		return null;
+	}
+	
+	public Boolean IsEntityAdjacent(Point pos, Entity entity) {
+		int absoluteX = Integer.MAX_VALUE;
+		int absoluteY = Integer.MAX_VALUE;
+		absoluteX = Math.abs(pos.x - entity.getPosition().x);
+		absoluteY = Math.abs(pos.y - entity.getPosition().y);
+		if (absoluteX <= 1 && absoluteY <= 1)
+			return true;
+		return false;
 	}
 	
 	private Point AddEntityAtLocation(Entity e, Point pos) {

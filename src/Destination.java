@@ -21,4 +21,8 @@ public class Destination implements Entity {
 	public int getId() {
 		return id;
 	}
+	
+	public void display() {
+		System.out.printf("[O]");
+	}
 }

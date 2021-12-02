@@ -19,6 +19,7 @@ public class AlgorithmRace {
 		Destination d = (Destination) map.GetEntityAtLocation(destPos);
 		a.addToDestinationQueue(d);
 		a.BranchBoundMemoPathfinding();
+		a.DijkstraPathfinding();
 	}
 
 }

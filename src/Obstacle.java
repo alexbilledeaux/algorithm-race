@@ -23,4 +23,8 @@ public class Obstacle implements Entity {
 		return id;
 	}
 	
+	public void display() {
+		System.out.printf("[X]");
+	}
+	
 }
