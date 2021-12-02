@@ -18,8 +18,9 @@ public class AlgorithmRace {
 		Actor a = (Actor) map.GetEntityAtLocation(actorPos);
 		Destination d = (Destination) map.GetEntityAtLocation(destPos);
 		a.addToDestinationQueue(d);
-		a.BranchBoundMemoPathfinding();
-		a.DijkstraPathfinding();
+		a.InitBranchBoundPathfinding();
+		a.InitDijkstraPathfinding();
+		
 	}
 
 }

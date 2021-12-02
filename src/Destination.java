@@ -3,10 +3,9 @@ import java.util.concurrent.ThreadLocalRandom;
 
 public class Destination implements Entity {
 	private int x, y;
-	private int id;
 	
 	public Destination() {
-		id = ThreadLocalRandom.current().nextInt();
+		
 	}
 	
 	public Point getPosition() {
@@ -16,10 +15,6 @@ public class Destination implements Entity {
 	public void setPosition(Point pos) {
 		x = (int) pos.getX();
 		y = (int) pos.getY();
-	}
-	
-	public int getId() {
-		return id;
 	}
 	
 	public void display() {

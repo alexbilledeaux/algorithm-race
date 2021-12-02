@@ -5,26 +5,45 @@ import java.util.concurrent.ThreadLocalRandom;
 public class Actor implements Entity {
 	
 	private int x, y;
-	private int id;
 	private Vector<Point> bestPath;
 	private Vector<Destination> destinationQueue = new Vector<Destination>();
 	private Map mapSnapshot;
 	
 	public Actor () {
-		id = ThreadLocalRandom.current().nextInt();
+
 	}
 	
 	public Actor(Actor a) {
 		x = a.x;
 		y = a.y;
-		id = a.id;
 	}
 	
-	public void BranchBoundMemoPathfinding() {
+	public Point getPosition() {
+		return new Point(x, y);
+	}
+	
+	public void setPosition(Point pos) {
+		x = (int) pos.getX();
+		y = (int) pos.getY();
+	}
+	
+	public void display() {
+		System.out.printf("[A]");
+	}
+	
+	public void setMap(Map m) {
+		mapSnapshot = m;
+	}
+	
+	public void addToDestinationQueue (Destination d) {
+		destinationQueue.add(d);
+	}
+	
+	public void InitBranchBoundPathfinding() {
 		
 		for (int i = 0; i < destinationQueue.size(); i++) {
 			long timeAtStart = System.nanoTime();
-			BranchBoundMemoPathfinding(destinationQueue.get(i), this.getPosition(), new Vector<Point>());
+			BranchBoundPathfindingToDestination(destinationQueue.get(i), this.getPosition(), new Vector<Point>());
 			long timeAtEnd = System.nanoTime();
 			System.out.print("Path to destination: ");
 			
@@ -39,8 +58,74 @@ public class Actor implements Entity {
 		}
 	}
 	
-	public void DijkstraPathfinding() {
+	public void InitDijkstraPathfinding() {
 		long timeAtStart = System.nanoTime();
+		Vector<Node> path = new Vector<Node>();
+		for (int i = 0; i < destinationQueue.size(); i++) {
+			path = DijkstraPathfindingToDestination(destinationQueue.get(i));
+		}
+		long timeAtEnd = System.nanoTime();
+		System.out.print("\nPath to destination: ");
+		
+		if (path.size() > 0) {
+			Vector<Point> pathAsPoints = new Vector<Point>();
+			for (int i = 0; i < path.size() - 1; i++) {
+				Point point = new Point (path.get(i + 1).getPosition().x - path.get(i).getPosition().x, path.get(i + 1).getPosition().y - path.get(i).getPosition().y);
+				pathAsPoints.add(point);
+			}
+			displayReadablePath(pathAsPoints);
+		} else {
+			System.out.print("No path");
+		}
+		System.out.print("| Execution time: " + (timeAtEnd - timeAtStart));
+	}
+	
+	private void BranchBoundPathfindingToDestination(Destination d, Point currentPosition, Vector<Point> currentPath) {
+		
+		if (currentPosition.x < 0 || currentPosition.y < 0 || currentPosition.x > mapSnapshot.getWidth() || currentPosition.y > mapSnapshot.getLength()) {
+			return;
+		} else if (mapSnapshot.GetEntityAtLocation(currentPosition) instanceof Obstacle)  {
+			return;
+		} else if (currentPath.size() > 200 || ( bestPath != null && currentPath.size() > bestPath.size())) {
+			return;
+		} else if(mapSnapshot.GetEntityAtLocation(currentPosition) == d) {
+			if (bestPath == null || currentPath.size() < bestPath.size())
+				bestPath = currentPath;
+			return;
+		}  else if (currentPath.size() > 0 && (Math.abs(currentPosition.y - currentPath.lastElement().y - d.getPosition().getY()) < Math.abs(currentPosition.y - d.getPosition().getY()))) {
+			return;
+		} else if (currentPath.size() > 0 && (Math.abs(currentPosition.x - currentPath.lastElement().x - d.getPosition().getX()) < Math.abs(currentPosition.x - d.getPosition().getX()))) {
+			return;
+		} else {
+			
+			Point PosAfterMoveUp = new Point(currentPosition);
+			PosAfterMoveUp.y++;
+			Vector<Point> currentPathUp = (Vector<Point>) currentPath.clone();
+			currentPathUp.add(new Point(0,1));
+			BranchBoundPathfindingToDestination(d, PosAfterMoveUp, currentPathUp);
+	
+			Point PosAfterMoveDown = new Point(currentPosition);
+			PosAfterMoveDown.y--;
+			Vector<Point> currentPathDown = (Vector<Point>) currentPath.clone();
+			currentPathDown.add(new Point(0, -1));
+			BranchBoundPathfindingToDestination(d, PosAfterMoveDown, currentPathDown);
+	
+				
+			Point PosAfterMoveLeft = new Point(currentPosition);
+			PosAfterMoveLeft.x--;
+			Vector<Point> currentPathLeft = (Vector<Point>) currentPath.clone();
+			currentPathLeft.add(new Point(-1, 0));
+			BranchBoundPathfindingToDestination(d, PosAfterMoveLeft, currentPathLeft);
+		
+			Point PosAfterMoveRight = new Point(currentPosition);
+			PosAfterMoveRight.x++;
+			Vector<Point> currentPathRight = (Vector<Point>) currentPath.clone();
+			currentPathRight.add(new Point(1,0));
+			BranchBoundPathfindingToDestination(d, PosAfterMoveRight, currentPathRight);
+		}
+	}
+	
+	private Vector<Node> DijkstraPathfindingToDestination(Destination d) {
 		Vector<Node> unvisitedNodes = new Vector<Node>();
 		// Start at origin
 		Vector<Node> nodesAdjacentToOrigin = mapSnapshot.getAdjacentNodes(this.getPosition());
@@ -68,17 +153,15 @@ public class Actor implements Entity {
 				unvisitedNodes.remove(visitedNode);
 			}
 		}
-		long timeAtEnd = System.nanoTime();
-		System.out.print("\nPath to destination: ");
 		Node bestPathNode = new Node(new Point(-1,-1));
-		Vector<Node> targetNodes = mapSnapshot.getAdjacentNodes(destinationQueue.get(0).getPosition());
+		Vector<Node> targetNodes = mapSnapshot.getAdjacentNodes(d.getPosition());
 		for (int i = 0; i < targetNodes.size(); i++) {
 			if (targetNodes.get(i).getShortestDistanceFromOrigin() < bestPathNode.getShortestDistanceFromOrigin())
 				bestPathNode = targetNodes.get(i);
 		}
 		
+		Vector<Node> pathAsNodes = new Vector<Node>();
 		if (bestPathNode.getShortestDistanceFromOrigin() != Integer.MAX_VALUE) {
-			Vector<Node> pathAsNodes = new Vector<Node>();
 			Node currentNode = bestPathNode;
 			for (int i = 0; i < bestPathNode.getShortestDistanceFromOrigin(); i++) {
 				pathAsNodes.insertElementAt(mapSnapshot.getNode(currentNode.getPosition()), 0);
@@ -86,42 +169,9 @@ public class Actor implements Entity {
 			}
 			pathAsNodes.insertElementAt(new Node(this.getPosition()), 0);
 			pathAsNodes.add(new Node(destinationQueue.get(0).getPosition()));
-			Vector<Point> path = new Vector<Point>();
-			for (int i = 0; i < pathAsNodes.size() - 1; i++) {
-				Point point = new Point (pathAsNodes.get(i + 1).getPosition().x - pathAsNodes.get(i).getPosition().x, pathAsNodes.get(i + 1).getPosition().y - pathAsNodes.get(i).getPosition().y);
-				path.add(point);
-			}
-			
-			displayReadablePath(path);
-		} else {
-			System.out.print("No path");
 		}
-		System.out.print("| Execution time: " + (timeAtEnd - timeAtStart));
-	}
-	
-	public Point getPosition() {
-		return new Point(x, y);
-	}
-	
-	public void setPosition(Point pos) {
-		x = (int) pos.getX();
-		y = (int) pos.getY();
-	}
-	
-	public void display() {
-		System.out.printf("[A]");
-	}
-	
-	public int getId() {
-		return id;
-	}
-	
-	public void setMap(Map m) {
-		mapSnapshot = m;
-	}
-	
-	public void addToDestinationQueue (Destination d) {
-		destinationQueue.add(d);
+		
+		return pathAsNodes;
 	}
 	
 	private void displayReadablePath(Vector<Point> p) {
@@ -135,58 +185,6 @@ public class Actor implements Entity {
 				System.out.print("D ");
 			if (p.get(z).y < 0)
 				System.out.print("U ");
-		}
-	}
-	
-	private void BranchBoundMemoPathfinding(Destination d, Point currentPosition, Vector<Point> currentPath) {
-		
-		//double currentDistance =  Math.abs(currentPosition.y - d.getPosition().getY()) + Math.abs(currentPosition.x - d.getPosition().getX());
-		
-		if (currentPosition.x < 0 || currentPosition.y < 0 || currentPosition.x > mapSnapshot.getWidth() || currentPosition.y > mapSnapshot.getLength()) {
-			//System.out.println("Off the map. Stopping.");
-			return;
-		} else if (mapSnapshot.GetEntityAtLocation(currentPosition) instanceof Obstacle)  {
-			//System.out.println("Hit an obstacle at " + a.getPosition()  + ". Stopping.");
-			return;
-		} else if (currentPath.size() > 200 || ( bestPath != null && currentPath.size() > bestPath.size())) {
-			//System.out.println("Ran out of time. Stopping.");
-			return;
-		} else if(mapSnapshot.GetEntityAtLocation(currentPosition) == d) {
-			if (bestPath == null || currentPath.size() < bestPath.size())
-				bestPath = currentPath;
-			return;
-		}  else if (currentPath.size() > 0 && (Math.abs(currentPosition.y - currentPath.lastElement().y - d.getPosition().getY()) < Math.abs(currentPosition.y - d.getPosition().getY()))) {
-			//System.out.println("Moving away from the Y of destination. Stopping.");
-			return;
-		} else if (currentPath.size() > 0 && (Math.abs(currentPosition.x - currentPath.lastElement().x - d.getPosition().getX()) < Math.abs(currentPosition.x - d.getPosition().getX()))) {
-			//System.out.println("Moving away from the X of destination. Stopping.");
-			return;
-		} else {
-			
-			Point PosAfterMoveUp = new Point(currentPosition);
-			PosAfterMoveUp.y++;
-			Vector<Point> currentPathUp = (Vector<Point>) currentPath.clone();
-			currentPathUp.add(new Point(0,1));
-			BranchBoundMemoPathfinding(d, PosAfterMoveUp, currentPathUp);
-	
-			Point PosAfterMoveDown = new Point(currentPosition);
-			PosAfterMoveDown.y--;
-			Vector<Point> currentPathDown = (Vector<Point>) currentPath.clone();
-			currentPathDown.add(new Point(0, -1));
-			BranchBoundMemoPathfinding(d, PosAfterMoveDown, currentPathDown);
-	
-				
-			Point PosAfterMoveLeft = new Point(currentPosition);
-			PosAfterMoveLeft.x--;
-			Vector<Point> currentPathLeft = (Vector<Point>) currentPath.clone();
-			currentPathLeft.add(new Point(-1, 0));
-			BranchBoundMemoPathfinding(d, PosAfterMoveLeft, currentPathLeft);
-		
-			Point PosAfterMoveRight = new Point(currentPosition);
-			PosAfterMoveRight.x++;
-			Vector<Point> currentPathRight = (Vector<Point>) currentPath.clone();
-			currentPathRight.add(new Point(1,0));
-			BranchBoundMemoPathfinding(d, PosAfterMoveRight, currentPathRight);
 		}
 	}
 	

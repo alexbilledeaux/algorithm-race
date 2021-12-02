@@ -16,17 +16,6 @@ public class Map {
 		length = l;
 	}
 	
-	public Point AddEntity(Entity e) {
-		int randomX, randomY;
-		randomX = ThreadLocalRandom.current().nextInt(0, width + 1);
-		randomY = ThreadLocalRandom.current().nextInt(0, length + 1);
-		Point pos = AddEntityAtLocation(e, new Point(randomX, randomY));
-		if (e instanceof Actor)
-			((Actor) e).setMap(this);
-		updateNodeMap();
-		return pos;
-	}
-	
 	public void PrintMap() {
 		for (int in = 0; in < length + 1; in++) {
 			for (int i = 0; i < width + 1; i++) {
@@ -45,6 +34,66 @@ public class Map {
 			}
 			System.out.printf("\n");
 		}
+	}
+	
+	public int getLength() {
+		return length;
+	}
+	
+	public int getWidth() {
+		return width;
+	}
+	
+	public Entity GetEntityAtLocation(Point pos) {
+		for (int i = 0; i < entities.size(); i++) {
+			if (entities.get(i).getPosition().equals(pos)) {
+				return entities.get(i);
+			}
+		}
+		return null;
+	}
+	
+	public Point AddEntity(Entity e) {
+		int randomX, randomY;
+		randomX = ThreadLocalRandom.current().nextInt(0, width + 1);
+		randomY = ThreadLocalRandom.current().nextInt(0, length + 1);
+		Point pos = AddEntityAtLocation(e, new Point(randomX, randomY));
+		if (e instanceof Actor)
+			((Actor) e).setMap(this);
+		updateNodeMap();
+		return pos;
+	}
+	
+	private Point AddEntityAtLocation(Entity e, Point pos) {
+		if (pos.getX() < 0 || pos.getY() < 0 || pos.getX() > width || pos.getY() > length) {
+			throw new IllegalArgumentException("Entity position is off the Map.");
+		}
+		Point finalPos = pos;
+		int nudgeDirection = 0;
+		while (GetEntityAtLocation(finalPos) != null) {
+			nudgeDirection = ThreadLocalRandom.current().nextInt(0, 4);
+			switch(nudgeDirection) {
+				case 0:
+					if (finalPos.getX() < length)
+						finalPos.x++;
+					break;
+				case 1:
+					if (finalPos.getX() > 0)
+						finalPos.x--;
+					break;
+				case 2:
+					if (finalPos.getY() < length)
+						finalPos.y++;
+					break;
+				case 3:
+					if (finalPos.getY() > 0)
+						finalPos.y--;
+					break;
+			}
+		}
+		e.setPosition(finalPos);
+		entities.add(e);
+		return finalPos;
 	}
 	
 	public void updateNodeMap() {
@@ -99,65 +148,6 @@ public class Map {
 				fetchedNode = nodeMap.get(i);
 		}
 		return fetchedNode;
-	}
-	
-	public int getLength() {
-		return length;
-	}
-	
-	public int getWidth() {
-		return width;
-	}
-	
-	public Entity GetEntityAtLocation(Point pos) {
-		for (int i = 0; i < entities.size(); i++) {
-			if (entities.get(i).getPosition().equals(pos)) {
-				return entities.get(i);
-			}
-		}
-		return null;
-	}
-	
-	public Boolean IsEntityAdjacent(Point pos, Entity entity) {
-		int absoluteX = Integer.MAX_VALUE;
-		int absoluteY = Integer.MAX_VALUE;
-		absoluteX = Math.abs(pos.x - entity.getPosition().x);
-		absoluteY = Math.abs(pos.y - entity.getPosition().y);
-		if (absoluteX <= 1 && absoluteY <= 1)
-			return true;
-		return false;
-	}
-	
-	private Point AddEntityAtLocation(Entity e, Point pos) {
-		if (pos.getX() < 0 || pos.getY() < 0 || pos.getX() > width || pos.getY() > length) {
-			throw new IllegalArgumentException("Entity position is off the Map.");
-		}
-		Point finalPos = pos;
-		int nudgeDirection = 0;
-		while (GetEntityAtLocation(finalPos) != null) {
-			nudgeDirection = ThreadLocalRandom.current().nextInt(0, 4);
-			switch(nudgeDirection) {
-				case 0:
-					if (finalPos.getX() < length)
-						finalPos.x++;
-					break;
-				case 1:
-					if (finalPos.getX() > 0)
-						finalPos.x--;
-					break;
-				case 2:
-					if (finalPos.getY() < length)
-						finalPos.y++;
-					break;
-				case 3:
-					if (finalPos.getY() > 0)
-						finalPos.y--;
-					break;
-			}
-		}
-		e.setPosition(finalPos);
-		entities.add(e);
-		return finalPos;
 	}
 	
 }
